@@ -13,6 +13,13 @@ required_formulae=(
 	cmake
 )
 
+ubuntu_packages_for_tree_sitter=(
+	build-essential
+	pkg-config
+	clang
+	libclang-dev
+)
+
 resolve_brew_bin() {
 	if command -v brew >/dev/null 2>&1; then
 		command -v brew
@@ -56,6 +63,46 @@ load_cargo_env_if_available() {
 	fi
 
 	return 1
+}
+
+run_as_root() {
+	if [[ "$(id -u)" -eq 0 ]]; then
+		"$@"
+	else
+		sudo "$@"
+	fi
+}
+
+install_ubuntu_packages_if_needed() {
+	if [[ "$(uname -s)" != "Linux" ]] || [[ ! -r /etc/os-release ]]; then
+		return 0
+	fi
+
+	# shellcheck disable=SC1091
+	. /etc/os-release
+
+	if [[ "${ID:-}" != "ubuntu" ]] && [[ "${ID_LIKE:-}" != *ubuntu* ]]; then
+		return 0
+	fi
+
+	local package
+	local missing_packages=()
+
+	for package in "${ubuntu_packages_for_tree_sitter[@]}"; do
+		if dpkg -s "$package" >/dev/null 2>&1; then
+			continue
+		fi
+		missing_packages+=("$package")
+	done
+
+	if [[ "${#missing_packages[@]}" -eq 0 ]]; then
+		echo "Ubuntu packages for tree-sitter build are already installed"
+		return 0
+	fi
+
+	echo "Installing Ubuntu packages: ${missing_packages[*]}"
+	run_as_root apt-get update
+	run_as_root apt-get install -y "${missing_packages[@]}"
 }
 
 install_formulae_if_needed() {
@@ -128,6 +175,29 @@ ensure_cargo_available() {
 	return 1
 }
 
+set_libclang_path_if_available() {
+	local candidate
+
+	if [[ -n "${LIBCLANG_PATH:-}" ]] && compgen -G "${LIBCLANG_PATH}/libclang.so*" >/dev/null; then
+		return 0
+	fi
+
+	for candidate in \
+		/usr/lib/llvm-*/lib \
+		/usr/lib/x86_64-linux-gnu \
+		/usr/lib64 \
+		/usr/local/lib
+	do
+		if compgen -G "${candidate}/libclang.so*" >/dev/null; then
+			export LIBCLANG_PATH="$candidate"
+			echo "Using LIBCLANG_PATH=$LIBCLANG_PATH"
+			return 0
+		fi
+	done
+
+	return 1
+}
+
 tree_sitter_is_healthy() {
 	command -v tree-sitter >/dev/null 2>&1 && tree-sitter --version >/dev/null 2>&1 && version_gte "$(tree_sitter_version)" "$minimum_tree_sitter_cli_version"
 }
@@ -149,7 +219,9 @@ install_tree_sitter_cli_with_npm() {
 }
 
 install_tree_sitter_cli_with_cargo() {
+	install_ubuntu_packages_if_needed
 	ensure_cargo_available
+	set_libclang_path_if_available || true
 	if command -v npm >/dev/null 2>&1; then
 		npm uninstall -g tree-sitter-cli >/dev/null 2>&1 || true
 	fi
