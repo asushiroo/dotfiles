@@ -43,6 +43,29 @@ load_brew_env() {
 	eval "$("$brew_bin" shellenv)"
 }
 
+detect_platform_and_rc_file() {
+	local os_name
+	os_name="$(uname -s)"
+
+	if [[ "$os_name" == "Darwin" ]]; then
+		echo "macos:$HOME/.zshrc:zsh"
+		return 0
+	fi
+
+	if [[ "$os_name" == "Linux" ]] && [[ -r /etc/os-release ]]; then
+		# shellcheck disable=SC1091
+		. /etc/os-release
+
+		if [[ "${ID:-}" == "ubuntu" ]] || [[ "${ID_LIKE:-}" == *ubuntu* ]]; then
+			echo "ubuntu:$HOME/.bashrc:bash"
+			return 0
+		fi
+	fi
+
+	echo "Unsupported system: $os_name" >&2
+	return 1
+}
+
 load_nvm_if_available() {
 	export NVM_DIR="${NVM_DIR:-$HOME/.nvm}"
 
@@ -255,9 +278,35 @@ install_tree_sitter_cli_if_needed() {
 	return 1
 }
 
+ensure_zoxide_init_in_rc() {
+	local platform_and_rc
+	local rest
+	local rc_file
+	local shell_name
+	local init_line
+
+	platform_and_rc="$(detect_platform_and_rc_file)"
+	rest="${platform_and_rc#*:}"
+	rc_file="${rest%%:*}"
+	shell_name="${rest##*:}"
+
+	touch "$rc_file"
+
+	init_line="eval \"\$(zoxide init ${shell_name})\""
+
+	if grep -Fq "$init_line" "$rc_file" 2>/dev/null; then
+		echo "zoxide init already exists in $rc_file"
+		return 0
+	fi
+
+	printf '\n%s\n' "$init_line" >>"$rc_file"
+	echo "zoxide init appended to $rc_file"
+}
+
 main() {
 	load_brew_env
 	install_formulae_if_needed
+	ensure_zoxide_init_in_rc
 	install_tree_sitter_cli_if_needed
 	echo "Neovim is ready: $(nvim --version | head -n 1)"
 	echo "Installed/checked brew dependencies: ${required_formulae[*]}"
