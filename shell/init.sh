@@ -1,9 +1,21 @@
-
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]:-${(%):-%x}}")" && pwd)"
+
+case "$(uname -s)" in
+Darwin*)
+	shell_rc_module="zshrc.sh"
+	;;
+Linux*)
+	shell_rc_module="bashrc.sh"
+	;;
+*)
+	shell_rc_module="zshrc.sh"
+	;;
+esac
+
 rc_modules=(
 	"env.sh"
-	"zshrc.sh"
-    "utils.sh"
+	"$shell_rc_module"
+	"utils.sh"
 )
 
 load_module() {
