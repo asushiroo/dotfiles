@@ -57,6 +57,8 @@ return {
 				NvimTreeNormalNC = { bg = "NONE" },
 				NvimTreeEndOfBuffer = { bg = "NONE" },
 				NvimTreeWinSeparator = { bg = "NONE" },
+				Visual = { bg = c.surface2 },
+				VisualNOS = { bg = c.surface1 },
 
 				LineNr = { fg = c.overlay1 },
 				LineNrAbove = { fg = c.overlay1 },
