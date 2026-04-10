@@ -14,5 +14,6 @@ return {
 	},
 	keys = {
 		{ "<leader>uf", ":NvimTreeToggle<CR>" },
+		{ "<leader>uh", ":NvimTreeToggleHidden<CR>" },
 	},
 }
