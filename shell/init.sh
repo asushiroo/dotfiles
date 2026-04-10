@@ -12,7 +12,7 @@ load_module() {
 	if [ -f "$full_path" ]; then
 		# shellcheck source=/dev/null
 		source "$full_path"
-		echo "source $full_path success!"
+		# echo "source $full_path success!"
 	fi
 }
 
