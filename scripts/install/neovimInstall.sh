@@ -155,6 +155,49 @@ ensure_npm_available() {
 	return 1
 }
 
+resolve_repo_root() {
+	local script_source script_dir
+	script_source="${BASH_SOURCE[0]}"
+
+	while [[ -L "$script_source" ]]; do
+		script_source="$(readlink "$script_source")"
+	done
+
+	script_dir="$(cd "$(dirname "$script_source")" && pwd)"
+
+	if [[ -f "$script_dir/../../.git/config" ]]; then
+		(cd "$script_dir/../.." && pwd)
+		return 0
+	fi
+
+	if command -v git >/dev/null 2>&1; then
+		if git -C "$script_dir" rev-parse --show-toplevel >/dev/null 2>&1; then
+			git -C "$script_dir" rev-parse --show-toplevel
+			return 0
+		fi
+	fi
+
+	if [[ -d "$HOME/.config/dotfiles/.git" ]]; then
+		echo "$HOME/.config/dotfiles"
+		return 0
+	fi
+
+	echo "Failed to resolve dotfiles repository root from $script_source" >&2
+	return 1
+}
+
+mdmath_mathjax_is_healthy() {
+	local mdmath_js_dir="$1"
+
+	[[ -f "$mdmath_js_dir/package.json" ]] || return 1
+	[[ -f "$mdmath_js_dir/node_modules/mathjax/package.json" ]] || return 1
+
+	(
+		cd "$mdmath_js_dir"
+		node --input-type=module -e "await import('mathjax')"
+	) >/dev/null 2>&1
+}
+
 ensure_cargo_available() {
 	if command -v cargo >/dev/null 2>&1; then
 		return 0
@@ -215,6 +258,38 @@ version_gte() {
 	[[ "$(printf '%s\n%s\n' "$expected" "$current" | sort -V | head -n 1)" == "$expected" ]]
 }
 
+ensure_mdmath_js_dependencies() {
+	local repo_root mdmath_js_dir
+	repo_root="$(resolve_repo_root)"
+	mdmath_js_dir="$repo_root/nvim/vendor/mdmath.nvim/mdmath-js"
+
+	if [[ ! -f "$mdmath_js_dir/package.json" ]]; then
+		echo "Skipping mdmath.js dependency install: package.json not found at $mdmath_js_dir"
+		return 0
+	fi
+
+	ensure_npm_available
+
+	if mdmath_mathjax_is_healthy "$mdmath_js_dir"; then
+		echo "mdmath.js dependency already installed: mathjax"
+		return 0
+	fi
+
+	echo "Installing/repairing mdmath.js dependencies..."
+	(
+		cd "$mdmath_js_dir"
+		npm install --no-fund --no-audit
+	)
+
+	if mdmath_mathjax_is_healthy "$mdmath_js_dir"; then
+		echo "mdmath.js dependency is ready: mathjax"
+		return 0
+	fi
+
+	echo "mdmath.js dependency installation finished, but mathjax is still unavailable." >&2
+	return 1
+}
+
 install_tree_sitter_cli_with_npm() {
 	ensure_npm_available
 	echo "Installing tree-sitter-cli via npm..."
@@ -261,9 +336,11 @@ install_tree_sitter_cli_if_needed() {
 main() {
 	load_brew_env
 	install_formulae_if_needed
+	ensure_mdmath_js_dependencies
 	install_tree_sitter_cli_if_needed
 	echo "Neovim is ready: $(nvim --version | head -n 1)"
 	echo "Installed/checked brew dependencies: ${required_formulae[*]}"
+	echo "Installed/checked mdmath.js dependency"
 	echo "Installed/checked tree-sitter-cli dependency"
 }
 
