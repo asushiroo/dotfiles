@@ -159,6 +159,8 @@
 - Rust 功能依赖本机已安装 Rust toolchain
 - Typst 预览依赖本机可用的 Typst 环境
 - OmniSharp 依赖本机可用的 `dotnet`
+- Markdown LaTeX 渲染使用 vendored `mdmath.nvim`，依赖 `node` / `npm` / ImageMagick / `rsvg-convert`
+- Markdown LaTeX 渲染依赖终端支持 Kitty Graphics Protocol；通过 SSH + tmux 使用时，需要本地终端支持该协议，且远端 `tmux` 开启 `allow-passthrough`
 - 若系统依赖不存在，对应专项插件 / LSP 会自动跳过加载，避免启动时报错
 
 ## 安装 / 更新

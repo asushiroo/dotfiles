@@ -15,6 +15,7 @@ This vendored copy of `mdmath.nvim` contains local modifications for this dotfil
 - inline rendering cleans up its own extmarks/images on invalidate
 - color handling is normalized to hex before requests are sent to the Node processor
 - `mdmath-js/node_modules/mathjax` is vendored so the plugin works after dotfiles sync without requiring an immediate `npm install`
+- when terminal `ioctl(TIOCGWINSZ)` does not report pixel dimensions correctly (common in SSH/tmux chains), cell size falls back to `tmux display-message` client cell metrics
 
 ## Important file
 

@@ -37,7 +37,7 @@ return {
 		opts = {
 			filetypes = { "markdown" },
 			foreground = "Normal",
-			anticonceal = true,
+			anticonceal = false,
 			hide_on_insert = true,
 			dynamic = false,
 			dynamic_scale = 1.0,

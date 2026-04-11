@@ -9,7 +9,7 @@ end
 
 -- FIXME: This is a temporary solution to avoid conflicts with other plugins that
 -- also uses Kitty's image protocol. We should find a better way to handle this.
-local _id = 333
+local _id = 64
 local function next_id()
     local id = _id
     _id = _id + 1
@@ -50,6 +50,19 @@ local function kitty_send(params, payload)
 end
 
 local Image = util.class 'Image'
+local SSH_SESSION = (os.getenv('SSH_CLIENT') and os.getenv('SSH_CLIENT') ~= '')
+    or (os.getenv('SSH_TTY') and os.getenv('SSH_TTY') ~= '')
+
+local function is_ssh_session()
+    return SSH_SESSION
+end
+
+local function read_binary_file(path)
+    local fd = assert(io.open(path, 'rb'))
+    local data = fd:read('*a')
+    fd:close()
+    return data
+end
 
 function Image:__tostring()
     return string.format('<Image id=%d>', self.id)
@@ -65,7 +78,12 @@ function Image:_init(rows, cols, payload)
     self.rows = rows
     self.cols = cols
 
-    kitty_send({i = id, f = 100, t = 'f'}, payload)
+    if is_ssh_session() then
+        local data = read_binary_file(payload)
+        kitty_send({i = id, f = 100, t = 'd'}, data)
+    else
+        kitty_send({i = id, f = 100, t = 'f'}, payload)
+    end
     kitty_send({i = id, U = 1, a = 'p', r = rows, c = cols})
 end
 
