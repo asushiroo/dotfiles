@@ -1,29 +1,58 @@
 return {
 	{
-		"OXY2DEV/markview.nvim",
-		lazy = false,
-		priority = 900,
+		"MeanderingProgrammer/render-markdown.nvim",
+		ft = { "markdown" },
 		dependencies = {
+			"nvim-treesitter/nvim-treesitter",
 			"nvim-tree/nvim-web-devicons",
 		},
 		opts = {
-			preview = {
-				filetypes = { "markdown" },
-				icon_provider = "devicons",
-			},
-			markdown = {
-				enable = true,
-			},
-			markdown_inline = {
-				enable = true,
+			enabled = true,
+			file_types = { "markdown" },
+			render_modes = { "n", "c", "t" },
+			anti_conceal = {
+				enabled = false,
 			},
 			latex = {
-				enable = false,
+				enabled = false,
+			},
+			code = {
+				-- Keep code rendering but avoid full-line background blocks in a
+				-- transparent terminal/theme.
+				disable_background = true,
+				width = "block",
+				border = "none",
+			},
+			heading = {
+				-- Keep heading icons, but do not paint heading backgrounds so
+				-- transparent themes stay clean. Floating icons while horizontal
+				-- scrolling are handled by core.markdown.render_markdown.
+				enabled = true,
+				sign = false,
+				position = "overlay",
+				width = "block",
+				left_margin = 0,
+				left_pad = 0,
+				right_pad = 0,
+				border = false,
+				border_virtual = false,
+				backgrounds = {},
+			},
+			pipe_table = {
+				-- Tables are rendered by core.markdown.table_render instead.
+				-- That renderer draws a whole clipped visual line per table row,
+				-- avoiding Neovim conceal/leftcol coordinate drift.
+				enabled = false,
 			},
 		},
+		config = function(_, opts)
+			local patch = require("core.markdown.render_markdown")
+			require("render-markdown").setup(opts)
+			patch.setup_transparent_highlights()
+		end,
 		keys = {
-			{ "<leader>um", "<Cmd>Markview toggle<CR>", desc = "Markdown preview toggle", silent = true },
-			{ "<leader>uM", "<Cmd>Markview splitToggle<CR>", desc = "Markdown split preview", silent = true },
+			{ "<leader>um", "<Cmd>RenderMarkdown buf_toggle<CR>", desc = "Markdown render toggle", silent = true },
+			{ "<leader>uM", "<Cmd>RenderMarkdown preview<CR>", desc = "Markdown render split preview", silent = true },
 		},
 	},
 	{
