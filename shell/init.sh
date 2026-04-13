@@ -16,6 +16,7 @@ rc_modules=(
 	"env.sh"
 	"$shell_rc_module"
 	"utils.sh"
+    "alias.sh"
 )
 
 load_module() {
