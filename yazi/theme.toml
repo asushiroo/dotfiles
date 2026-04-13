@@ -1,0 +1,23 @@
+[app]
+overall = { bg = "reset" }
+
+[mgr]
+cwd = { fg = "green", bold = true }
+border_style = { fg = "darkgray", bg = "reset" }
+
+[tabs]
+active = { fg = "green", bg = "reset", bold = true }
+inactive = { fg = "gray", bg = "reset" }
+
+[mode]
+normal_main = { fg = "green", bg = "reset", bold = true }
+normal_alt = { fg = "white", bg = "reset" }
+select_main = { fg = "yellow", bg = "reset", bold = true }
+select_alt = { fg = "white", bg = "reset" }
+unset_main = { fg = "red", bg = "reset", bold = true }
+unset_alt = { fg = "white", bg = "reset" }
+
+[status]
+overall = { fg = "white", bg = "reset" }
+progress_normal = { fg = "green", bg = "reset" }
+progress_error = { fg = "red", bg = "reset" }

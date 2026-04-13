@@ -1,0 +1,7 @@
+[mgr]
+prepend_keymap = [
+	{ on = [ "g", "." ], run = "hidden toggle", desc = "Toggle hidden files" },
+	{ on = [ "g", "m" ], run = "linemode mtime", desc = "Linemode: mtime" },
+	{ on = [ "g", "s" ], run = "linemode size", desc = "Linemode: size" },
+	{ on = [ "g", "n" ], run = "sort natural --dir-first", desc = "Sort naturally" },
+]

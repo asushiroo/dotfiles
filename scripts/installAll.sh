@@ -6,6 +6,7 @@ script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 homebrew_install_script="$script_dir/install/homeBrewInstall.sh"
 neovim_install_script="$script_dir/install/neovimInstall.sh"
 starship_install_script="$script_dir/install/starshipInstall.sh"
+yazi_install_script="$script_dir/install/yaziInstall.sh"
 
 if [[ ! -f "$homebrew_install_script" ]]; then
 	echo "Homebrew install script not found: $homebrew_install_script" >&2
@@ -22,6 +23,11 @@ if [[ ! -f "$starship_install_script" ]]; then
 	exit 1
 fi
 
+if [[ ! -f "$yazi_install_script" ]]; then
+	echo "Yazi install script not found: $yazi_install_script" >&2
+	exit 1
+fi
+
 echo "Running Homebrew setup script..."
 bash "$homebrew_install_script"
 
@@ -30,5 +36,8 @@ bash "$neovim_install_script"
 
 echo "Running Starship setup script..."
 bash "$starship_install_script"
+
+echo "Running Yazi setup script..."
+bash "$yazi_install_script"
 
 echo "All install scripts completed."
