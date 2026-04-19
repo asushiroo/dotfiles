@@ -7,6 +7,7 @@ vim.api.nvim_create_autocmd("FileType", {
 		vim.opt_local.breakindent = false
 
 		require("core.markdown.table_render").setup(0)
+		require("core.markdown.mermaid").setup(0)
 
 		vim.api.nvim_buf_create_user_command(0, "MarkdownTableRenderRefresh", function()
 			require("core.markdown.table_render").update(0)
