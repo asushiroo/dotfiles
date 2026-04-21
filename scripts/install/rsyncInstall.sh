@@ -39,21 +39,21 @@ load_brew_env() {
 	eval "$("$brew_bin" shellenv)"
 }
 
-install_starship_if_needed() {
-	if brew list --versions starship >/dev/null 2>&1; then
-		log_info "Starship is already installed"
+install_rsync_if_needed() {
+	if command -v rsync >/dev/null 2>&1; then
+		log_info "rsync is already installed: $(rsync --version | head -n 1)"
 		return 0
 	fi
 
-	log_info "Installing Starship via Homebrew..."
-	brew install starship
+	log_info "Installing rsync via Homebrew..."
+	brew install rsync
 }
 
 main() {
 	load_brew_env
-	install_starship_if_needed
+	install_rsync_if_needed
 
-	log_info "Starship is ready: $(starship --version)"
+	log_info "rsync is ready: $(rsync --version | head -n 1)"
 }
 
 main "$@"

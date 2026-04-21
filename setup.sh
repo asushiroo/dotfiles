@@ -2,6 +2,16 @@
 
 set -euo pipefail
 
+log_msg() {
+	local level="$1"
+	shift
+	printf '[%s] %s\n' "$level" "$*"
+}
+
+log_info() {
+	log_msg "info" "$*"
+}
+
 resolve_repo_dir() {
 	local script_source script_dir
 	script_source="${BASH_SOURCE[0]}"
@@ -39,34 +49,34 @@ ensure_shell_init() {
 	touch "$rc_file"
 
 	if grep -Fqx "$source_line" "$rc_file"; then
-		echo "Shell init already enabled in $rc_file"
+		log_info "Shell init already enabled in $rc_file"
 		return 0
 	fi
 
 	if grep -Fq "$shell_init" "$rc_file"; then
-		echo "Shell init already referenced in $rc_file"
+		log_info "Shell init already referenced in $rc_file"
 		return 0
 	fi
 
 	printf '\n# dotfiles shell init\n%s\n' "$source_line" >> "$rc_file"
-	echo "Added shell init to $rc_file"
+	log_info "Added shell init to $rc_file"
 }
 
 main() {
 	local repo_dir
 	repo_dir="$(resolve_repo_dir)"
 
-	echo "Running install scripts..."
+	log_info "Running install scripts..."
 	bash "$repo_dir/scripts/installAll.sh"
 
-	echo "Ensuring shell init is loaded..."
+	log_info "Ensuring shell init is loaded..."
 	ensure_shell_init "$repo_dir"
 
-	echo "Running link scripts..."
+	log_info "Running link scripts..."
 	bash "$repo_dir/scripts/linkAll.sh"
 
-	echo "Setup completed."
-	echo "Please restart your shell or run: source \"$repo_dir/shell/init.sh\""
+	log_info "Setup completed."
+	log_info "Please restart your shell or run: source \"$repo_dir/shell/init.sh\""
 }
 
 main "$@"

@@ -2,6 +2,24 @@
 
 set -euo pipefail
 
+log_msg() {
+	local level="$1"
+	shift
+	printf '[%s] %s\n' "$level" "$*"
+}
+
+log_info() {
+	log_msg "info" "$*"
+}
+
+log_warn() {
+	log_msg "warn" "$*"
+}
+
+log_error() {
+	log_msg "error" "$*" >&2
+}
+
 common_formulae=(
 	yazi
 	ffmpeg
@@ -31,7 +49,7 @@ resolve_brew_bin() {
 		fi
 	done
 
-	echo "Homebrew not found. Please run the Homebrew install script first." >&2
+	log_error "Homebrew not found. Please run the Homebrew install script first."
 	return 1
 }
 
@@ -47,7 +65,7 @@ install_formulae_if_needed() {
 
 	for formula in "$@"; do
 		if brew list --versions "$formula" >/dev/null 2>&1; then
-			echo "Already installed: $formula"
+			log_info "Already installed: $formula"
 			continue
 		fi
 
@@ -55,11 +73,11 @@ install_formulae_if_needed() {
 	done
 
 	if [[ "${#missing_formulae[@]}" -eq 0 ]]; then
-		echo "All Yazi-related dependencies are already installed"
+		log_info "All Yazi-related dependencies are already installed"
 		return 0
 	fi
 
-	echo "Installing formulae: ${missing_formulae[*]}"
+	log_info "Installing formulae: ${missing_formulae[*]}"
 	brew install "${missing_formulae[@]}"
 }
 
@@ -67,25 +85,23 @@ install_yazi_plugins_if_possible() {
 	local plugin
 
 	if ! command -v ya >/dev/null 2>&1; then
-		echo "Skipping Yazi plugin install because 'ya' is unavailable"
+		log_warn "Skipping Yazi plugin install because 'ya' is unavailable"
 		return 0
 	fi
 
 	for plugin in "${yazi_plugins[@]}"; do
-		echo "Installing Yazi plugin: $plugin"
+		log_info "Installing Yazi plugin: $plugin"
 		if ! ya pkg add "$plugin"; then
-			echo "Warning: failed to install Yazi plugin $plugin" >&2
+			log_warn "Failed to install Yazi plugin: $plugin"
 		fi
 	done
 }
 
 print_runtime_notes() {
-	echo
-	echo "Yazi is ready: $(yazi --version)"
-	echo "Tips:"
-	echo "  - Use 'y' instead of 'yazi' to allow shell cwd sync after quit."
-	echo "  - relative-motions plugin is configured for vim-like motions such as 3j / 12k / 10gg."
-	echo "  - xclip is installed for Linux X11 clipboard fallback."
+	log_info "Yazi is ready: $(yazi --version)"
+	log_info "Tips: Use 'y' instead of 'yazi' to allow shell cwd sync after quit."
+	log_info "Tips: relative-motions plugin is configured for motions like 3j / 12k / 10gg."
+	log_info "Tips: xclip is installed for Linux X11 clipboard fallback."
 }
 
 main() {

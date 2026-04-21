@@ -2,6 +2,24 @@
 
 set -euo pipefail
 
+log_msg() {
+	local level="$1"
+	shift
+	printf '[%s] %s\n' "$level" "$*"
+}
+
+log_info() {
+	log_msg "info" "$*"
+}
+
+log_warn() {
+	log_msg "warn" "$*"
+}
+
+log_error() {
+	log_msg "error" "$*" >&2
+}
+
 minimum_tree_sitter_cli_version="0.26.1"
 cargo_domestic_sparse_index="sparse+https://rsproxy.cn/index/"
 rustup_upstream_script_url="https://sh.rustup.rs"
@@ -43,7 +61,7 @@ resolve_brew_bin() {
 		fi
 	done
 
-	echo "Homebrew not found. Please run the Homebrew install script first." >&2
+	log_error "Homebrew not found. Please run the Homebrew install script first."
 	return 1
 }
 
@@ -93,7 +111,7 @@ run_nvm_install_lts() {
 		return 0
 	fi
 
-	echo "Node.js LTS install failed with upstream source, retrying with domestic mirror..."
+	log_warn "Node.js LTS install failed with upstream source, retrying with domestic mirror..."
 	NVM_NODEJS_ORG_MIRROR="$nvm_domestic_node_mirror" nvm install --lts
 }
 
@@ -102,7 +120,7 @@ run_npm_command() {
 		return 0
 	fi
 
-	echo "npm command failed with upstream registry, retrying with domestic mirror..."
+	log_warn "npm command failed with upstream registry, retrying with domestic mirror..."
 	npm --registry "$npm_domestic_registry" "$@"
 }
 
@@ -137,11 +155,11 @@ install_ubuntu_packages_if_needed() {
 	done
 
 	if [[ "${#missing_packages[@]}" -eq 0 ]]; then
-		echo "Ubuntu packages for tree-sitter build are already installed"
+		log_info "Ubuntu packages for tree-sitter build are already installed"
 		return 0
 	fi
 
-	echo "Installing Ubuntu packages: ${missing_packages[*]}"
+	log_info "Installing Ubuntu packages: ${missing_packages[*]}"
 	run_as_root apt-get update
 	run_as_root apt-get install -y "${missing_packages[@]}"
 }
@@ -152,7 +170,7 @@ install_formulae_if_needed() {
 
 	for formula in "${required_formulae[@]}"; do
 		if brew list --versions "$formula" >/dev/null 2>&1; then
-			echo "Already installed: $formula"
+			log_info "Already installed: $formula"
 			continue
 		fi
 
@@ -160,11 +178,11 @@ install_formulae_if_needed() {
 	done
 
 	if [[ "${#missing_formulae[@]}" -eq 0 ]]; then
-		echo "All Neovim-related Homebrew dependencies are already installed"
+		log_info "All Neovim-related Homebrew dependencies are already installed"
 		return 0
 	fi
 
-	echo "Installing formulae: ${missing_formulae[*]}"
+	log_info "Installing formulae: ${missing_formulae[*]}"
 	brew install "${missing_formulae[@]}"
 }
 
@@ -180,7 +198,7 @@ ensure_npm_available() {
 	fi
 
 	if command -v nvm >/dev/null 2>&1; then
-		echo "Installing Node.js LTS via nvm (upstream source first)..."
+		log_info "Installing Node.js LTS via nvm (upstream source first)..."
 		if run_nvm_install_lts; then
 			nvm use --lts >/dev/null
 		fi
@@ -190,7 +208,7 @@ ensure_npm_available() {
 		return 0
 	fi
 
-	echo "npm not found. Please install Node.js with nvm first." >&2
+	log_error "npm not found. Please install Node.js with nvm first."
 	return 1
 }
 
@@ -221,7 +239,7 @@ resolve_repo_root() {
 		return 0
 	fi
 
-	echo "Failed to resolve dotfiles repository root from $script_source" >&2
+	log_error "Failed to resolve dotfiles repository root from $script_source"
 	return 1
 }
 
@@ -248,11 +266,11 @@ ensure_cargo_available() {
 		return 0
 	fi
 
-	echo "cargo not found, installing Rust toolchain via rustup..."
+	log_info "cargo not found, installing Rust toolchain via rustup..."
 	if run_rustup_installer "$rustup_upstream_script_url" -y --profile minimal; then
 		:
 	else
-		echo "Rust toolchain install failed with upstream source, retrying with domestic mirror..."
+		log_warn "Rust toolchain install failed with upstream source, retrying with domestic mirror..."
 		RUSTUP_DIST_SERVER="$rustup_domestic_dist_server" \
 			RUSTUP_UPDATE_ROOT="$rustup_domestic_update_root" \
 			run_rustup_installer "$rustup_domestic_script_url" -y --profile minimal
@@ -263,7 +281,7 @@ ensure_cargo_available() {
 		return 0
 	fi
 
-	echo "cargo is still unavailable after rustup installation." >&2
+	log_error "cargo is still unavailable after rustup installation."
 	return 1
 }
 
@@ -282,7 +300,7 @@ set_libclang_path_if_available() {
 	do
 		if compgen -G "${candidate}/libclang.so*" >/dev/null; then
 			export LIBCLANG_PATH="$candidate"
-			echo "Using LIBCLANG_PATH=$LIBCLANG_PATH"
+			log_info "Using LIBCLANG_PATH=$LIBCLANG_PATH"
 			return 0
 		fi
 	done
@@ -310,35 +328,35 @@ ensure_mdmath_js_dependencies() {
 	mdmath_js_dir="$repo_root/nvim/vendor/mdmath.nvim/mdmath-js"
 
 	if [[ ! -f "$mdmath_js_dir/package.json" ]]; then
-		echo "Skipping mdmath.js dependency install: package.json not found at $mdmath_js_dir"
+		log_info "Skipping mdmath.js dependency install: package.json not found at $mdmath_js_dir"
 		return 0
 	fi
 
 	ensure_npm_available
 
 	if mdmath_mathjax_is_healthy "$mdmath_js_dir"; then
-		echo "mdmath.js dependency already installed: mathjax"
+		log_info "mdmath.js dependency already installed: mathjax"
 		return 0
 	fi
 
-	echo "Installing/repairing mdmath.js dependencies (upstream registry first)..."
+	log_info "Installing/repairing mdmath.js dependencies (upstream registry first)..."
 	(
 		cd "$mdmath_js_dir"
 		run_npm_command install --no-fund --no-audit
 	)
 
 	if mdmath_mathjax_is_healthy "$mdmath_js_dir"; then
-		echo "mdmath.js dependency is ready: mathjax"
+		log_info "mdmath.js dependency is ready: mathjax"
 		return 0
 	fi
 
-	echo "mdmath.js dependency installation finished, but mathjax is still unavailable." >&2
+	log_error "mdmath.js dependency installation finished, but mathjax is still unavailable."
 	return 1
 }
 
 install_tree_sitter_cli_with_npm() {
 	ensure_npm_available
-	echo "Installing tree-sitter-cli via npm (upstream registry first)..."
+	log_info "Installing tree-sitter-cli via npm (upstream registry first)..."
 	run_npm_command install -g tree-sitter-cli
 }
 
@@ -349,38 +367,38 @@ install_tree_sitter_cli_with_cargo() {
 	if command -v npm >/dev/null 2>&1; then
 		npm uninstall -g tree-sitter-cli >/dev/null 2>&1 || true
 	fi
-	echo "Installing tree-sitter-cli via cargo (upstream source first)..."
+	log_info "Installing tree-sitter-cli via cargo (upstream source first)..."
 	if cargo install tree-sitter-cli --locked --force; then
 		return 0
 	fi
 
-	echo "tree-sitter-cli install failed with upstream cargo source, retrying with domestic mirror..."
+	log_warn "tree-sitter-cli install failed with upstream cargo source, retrying with domestic mirror..."
 	cargo install tree-sitter-cli --locked --force --index "$cargo_domestic_sparse_index"
 }
 
 install_tree_sitter_cli_if_needed() {
 	if tree_sitter_is_healthy; then
-		echo "Already installed: tree-sitter-cli $(tree_sitter_version)"
+		log_info "Already installed: tree-sitter-cli $(tree_sitter_version)"
 		return 0
 	fi
 
 	if command -v tree-sitter >/dev/null 2>&1 && tree-sitter --version >/dev/null 2>&1; then
-		echo "Detected tree-sitter-cli $(tree_sitter_version), but nvim-treesitter requires >= ${minimum_tree_sitter_cli_version}"
+		log_warn "Detected tree-sitter-cli $(tree_sitter_version), but nvim-treesitter requires >= ${minimum_tree_sitter_cli_version}"
 	fi
 
 	if [[ "$(uname -s)" == "Linux" ]]; then
-		echo "Linux detected: install tree-sitter-cli from source to avoid GLIBC issues with npm prebuilt binaries"
+		log_info "Linux detected: install tree-sitter-cli from source to avoid GLIBC issues with npm prebuilt binaries"
 		install_tree_sitter_cli_with_cargo
 	else
 		install_tree_sitter_cli_with_npm
 	fi
 
 	if tree_sitter_is_healthy; then
-		echo "tree-sitter-cli is ready: $(tree_sitter_version)"
+		log_info "tree-sitter-cli is ready: $(tree_sitter_version)"
 		return 0
 	fi
 
-	echo "tree-sitter-cli installation finished, but the executable is still unavailable." >&2
+	log_error "tree-sitter-cli installation finished, but the executable is still unavailable."
 	return 1
 }
 
@@ -389,10 +407,10 @@ main() {
 	install_formulae_if_needed
 	ensure_mdmath_js_dependencies
 	install_tree_sitter_cli_if_needed
-	echo "Neovim is ready: $(nvim --version | head -n 1)"
-	echo "Installed/checked brew dependencies: ${required_formulae[*]}"
-	echo "Installed/checked mdmath.js dependency"
-	echo "Installed/checked tree-sitter-cli dependency"
+	log_info "Neovim is ready: $(nvim --version | head -n 1)"
+	log_info "Installed/checked brew dependencies: ${required_formulae[*]}"
+	log_info "Installed/checked mdmath.js dependency"
+	log_info "Installed/checked tree-sitter-cli dependency"
 }
 
 main "$@"
