@@ -46,6 +46,12 @@ const INLINE_TALL_EQUATIONS = new Set([
 ]);
 const INLINE_TALL_SCALE = 0.92;
 const INLINE_TALL_EXPRESSION_SCALE = 0.95;
+const INLINE_BASELINE_REFERENCE = Object.freeze({
+    // MathJax default inline italic glyph metrics for a plain symbol like `x`.
+    // We keep that centered and offset other inline equations relative to it.
+    heightEx: 1.025,
+    depthEx: 0.025,
+});
 
 function containsAnyCommand(equation, commands) {
     for (const command of commands) {
@@ -82,8 +88,10 @@ async function equationToSVG(equation) {
 
     try {
         const svg = await MathJax.tex2svgPromise(equation);
+        const innerSVG = MathJax.startup.adaptor.innerHTML(svg);
         return svgCache[equation] = {
-            svg: MathJax.startup.adaptor.innerHTML(svg)
+            svg: innerSVG,
+            metrics: parseSVGMetrics(innerSVG),
         }
     } catch (err) {
         if (err instanceof MathError) {
@@ -112,6 +120,73 @@ function parseViewbox(svgString) {
 
     const [minX, minY, width, height] = viewboxMatch[1].split(' ').map(parseFloat);
     return { minX, minY, width, height };
+}
+
+function parseExValue(value) {
+    if (!value)
+        return null;
+
+    const match = String(value).trim().match(/^(-?\d+(?:\.\d+)?)(?:ex)?$/);
+    if (!match)
+        return null;
+
+    return Number(match[1]);
+}
+
+function parseSVGMetrics(svgString) {
+    const heightEx = parseExValue(svgString.match(/\bheight="([^"]+)"/)?.[1]);
+    if (!heightEx || heightEx <= 0) {
+        return null;
+    }
+
+    const verticalAlignEx = parseExValue(svgString.match(/vertical-align:\s*([^;"]+)/)?.[1] ?? '0');
+    if (verticalAlignEx !== null) {
+        return {
+            heightEx,
+            depthEx: Math.max(0, -verticalAlignEx),
+        };
+    }
+
+    const viewbox = parseViewbox(svgString);
+    if (!viewbox || !viewbox.height || viewbox.height <= 0) {
+        return {
+            heightEx,
+            depthEx: 0,
+        };
+    }
+
+    const depthUnits = Math.max(0, viewbox.height + Math.min(0, viewbox.minY));
+    return {
+        heightEx,
+        depthEx: heightEx * (depthUnits / viewbox.height),
+    };
+}
+
+function computeInlineOffsetY(metrics, pngHeight, targetHeight, equationScale) {
+    if (!metrics
+        || !Number.isFinite(metrics.heightEx)
+        || metrics.heightEx <= 0
+        || !Number.isFinite(equationScale)
+        || equationScale <= 0) {
+        return 0;
+    }
+
+    const basePixelsPerEx = pngHeight / (metrics.heightEx * equationScale);
+    if (!Number.isFinite(basePixelsPerEx) || basePixelsPerEx <= 0)
+        return 0;
+
+    const currentDepthPx = basePixelsPerEx * metrics.depthEx * equationScale;
+    const referenceHeightPx = basePixelsPerEx * INLINE_BASELINE_REFERENCE.heightEx;
+    const referenceDepthPx = basePixelsPerEx * INLINE_BASELINE_REFERENCE.depthEx;
+    const rawOffsetY = currentDepthPx
+        - (pngHeight / 2)
+        - (referenceDepthPx - (referenceHeightPx / 2));
+    const maxOffsetY = Math.max(0, Math.floor((targetHeight - pngHeight) / 2));
+
+    if (maxOffsetY === 0)
+        return 0;
+
+    return Math.max(-maxOffsetY, Math.min(maxOffsetY, Math.round(rawOffsetY)));
 }
 
 function isDisplayFractionEquation(equation, flags, height) {
@@ -159,7 +234,7 @@ async function processEquation(identifier, equation, cWidth, cHeight, width, hei
         return write(identifier, equationObj.width, equationObj.height, equationObj.filename);
     }
 
-    let {svg, error} = await equationToSVG(equation);
+    let {svg, error, metrics} = await equationToSVG(equation);
     if (!svg)
         return writeError(identifier, error)
 
@@ -168,14 +243,18 @@ async function processEquation(identifier, equation, cWidth, cHeight, width, hei
         .replace(/style="[^"]+"/, '')
 
     const isDynamic = !!(flags & 1);
+    const inlineTargetPixelHeight = isInline
+        ? Math.max(1, Math.floor(cHeight * internalScale))
+        : null;
 
     let basePNG;
     let iWidth, iHeight;
+    let pngWidth, pngHeight;
     if (isDynamic && isDisplayFractionEquation(equation, flags, height)) {
         const targetHeight = height * cHeight * internalScale;
         basePNG = await rsvgConvert(svg, {height: targetHeight});
 
-        const {width: pngWidth, height: pngHeight} = await pngDimensions(basePNG);
+        ({width: pngWidth, height: pngHeight} = await pngDimensions(basePNG));
         const newWidth = (pngWidth / internalScale) / cWidth;
         const newHeight = (pngHeight / internalScale) / cHeight;
 
@@ -185,17 +264,28 @@ async function processEquation(identifier, equation, cWidth, cHeight, width, hei
         iWidth = width * cWidth * internalScale;
         iHeight = height * cHeight * internalScale;
     } else if (isDynamic) {
-        const zoom = 10 * dynamicScale * cHeight * internalScale * equationScale / 96;
+        let zoom = 10 * dynamicScale * cHeight * internalScale * equationScale / 96;
         basePNG = await rsvgConvert(svg, {zoom});
 
-        const {width: pngWidth, height: pngHeight} = await pngDimensions(basePNG);
+        ({width: pngWidth, height: pngHeight} = await pngDimensions(basePNG));
+
+        if (isInline && inlineTargetPixelHeight && pngHeight > inlineTargetPixelHeight) {
+            zoom = zoom * (inlineTargetPixelHeight / pngHeight);
+            basePNG = await rsvgConvert(svg, {zoom});
+            ({width: pngWidth, height: pngHeight} = await pngDimensions(basePNG));
+        }
 
         const newWidth = (pngWidth / internalScale) / cWidth;
         const newHeight = (pngHeight / internalScale) / cHeight;
 
         // If the image is smaller than the cell, it's better to keep the original size, so
         width = Math.max(width, Math.ceil(newWidth));
-        height = Math.max(height, Math.ceil(newHeight));
+
+        if (isInline) {
+            height = 1;
+        } else {
+            height = Math.max(height, Math.ceil(newHeight));
+        }
 
         iWidth = width * cWidth * internalScale;
         iHeight = height * cHeight * internalScale;
@@ -208,9 +298,13 @@ async function processEquation(identifier, equation, cWidth, cHeight, width, hei
 
     const hash = sha256Hash(equation).slice(0, 7);
     const isCenter = !!(flags & 2);
+    const offsetY = isInline
+        ? computeInlineOffsetY(metrics, pngHeight, iHeight, equationScale)
+        : 0;
     const filename = `${IMG_DIR}/${hash}_${iWidth}x${iHeight}.png`;
     await pngFitTo(basePNG, filename, iWidth, iHeight, {
         center: isCenter,
+        offsetY,
     });
 
     const equationObj = {equation, filename, width, height};
