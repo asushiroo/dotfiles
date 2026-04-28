@@ -114,6 +114,10 @@ return {
 			editor_only_render_when_focused = false,
 			hijack_file_patterns = { "*.png", "*.jpg", "*.jpeg", "*.gif", "*.webp", "*.avif" },
 		},
+		config = function(_, opts)
+			require("core.image.rsvg_fallback").apply()
+			require("image").setup(opts)
+		end,
 		keys = {
 			{
 				"<leader>ui",
