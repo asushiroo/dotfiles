@@ -23,6 +23,7 @@ tmux_link_script="$script_dir/link/tmuxLink.sh"
 yazi_link_script="$script_dir/link/yaziLink.sh"
 starship_link_script="$script_dir/link/starshipLink.sh"
 codex_rsync_script="$script_dir/link/codexRsync.sh"
+lazygit_link_script="$script_dir/link/lazygitLink.sh"
 
 if [[ ! -f "$nvim_link_script" ]]; then
 	log_error "nvim link script not found: $nvim_link_script"
@@ -49,6 +50,11 @@ if [[ ! -f "$codex_rsync_script" ]]; then
 	exit 1
 fi
 
+if [[ ! -f "$lazygit_link_script" ]]; then
+	log_error "lazygit link script not found: $lazygit_link_script"
+	exit 1
+fi
+
 log_info "Running nvim link setup script..."
 bash "$nvim_link_script"
 
@@ -63,5 +69,8 @@ bash "$starship_link_script"
 
 log_info "Running codex link setup script..."
 bash "$codex_rsync_script"
+
+log_info "Running lazygit link setup script..."
+bash "$lazygit_link_script"
 
 log_info "All link scripts completed."
