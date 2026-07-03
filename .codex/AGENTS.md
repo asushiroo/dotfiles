@@ -95,3 +95,12 @@ it needs to be suspended using `read` until I check the completed results.
 When conducting comparative experiments, the code structure and file paths may vary across implementations.
 However, the dataset will always be placed in a fixed, predefined location. Do not rely on symbolic links or external path redirection;
 instead, modify the dataset path directly within the code for each experiment.
+
+## 5. Commit After Each Completed Change
+
+**Every completed change must end with a git commit.**
+
+- After finishing a task or discrete operation, create a git commit before moving on.
+- Use a clear, standardized commit message format: `<type>(<scope>): <summary>`.
+- Prefer concise, descriptive messages such as `feat(app): add API endpoint` or `fix(parser): handle empty input`.
+- Do not use vague messages like `update`, `fix`, or `changes`.
