@@ -96,11 +96,13 @@ When conducting comparative experiments, the code structure and file paths may v
 However, the dataset will always be placed in a fixed, predefined location. Do not rely on symbolic links or external path redirection;
 instead, modify the dataset path directly within the code for each experiment.
 
-## 5. Commit After Each Completed Change
+## 5. Commit Policy
 
-**Every completed change must end with a git commit.**
+**Code changes should still end with a git commit, but documentation-only updates do not require a commit unless the user explicitly asks for one.**
 
-- After finishing a task or discrete operation, create a git commit before moving on.
+- After finishing a code change or discrete implementation task, create a git commit before moving on.
+- For documentation-only updates, do not create a git commit by default.
+- Only commit documentation changes when the user explicitly requests a commit.
 - Use a clear, standardized commit message format: `<type>(<scope>): <summary>`.
 - Prefer concise, descriptive messages such as `feat(app): add API endpoint` or `fix(parser): handle empty input`.
 - Do not use vague messages like `update`, `fix`, or `changes`.
