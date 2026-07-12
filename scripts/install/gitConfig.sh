@@ -15,8 +15,10 @@ log_info() {
 main() {
 	git config --global diff.tool nvimdiff
 	git config --global difftool.prompt false
+	git config --global merge.tool nvimdiff
+	git config --global mergetool.prompt false
 
-	log_info "Git difftool configured: nvimdiff"
+	log_info "Git diff/merge tool configured: nvimdiff"
 }
 
 main "$@"
