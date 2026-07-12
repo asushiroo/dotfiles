@@ -19,6 +19,7 @@ log_error() {
 script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 homebrew_install_script="$script_dir/install/homeBrewInstall.sh"
 git_install_script="$script_dir/install/gitInstall.sh"
+git_config_script="$script_dir/install/gitConfig.sh"
 rsync_install_script="$script_dir/install/rsyncInstall.sh"
 neovim_install_script="$script_dir/install/neovimInstall.sh"
 starship_install_script="$script_dir/install/starshipInstall.sh"
@@ -32,6 +33,11 @@ fi
 
 if [[ ! -f "$git_install_script" ]]; then
 	log_error "Git install script not found: $git_install_script"
+	exit 1
+fi
+
+if [[ ! -f "$git_config_script" ]]; then
+	log_error "Git config script not found: $git_config_script"
 	exit 1
 fi
 
@@ -65,6 +71,9 @@ bash "$homebrew_install_script"
 
 log_info "Running Git setup script..."
 bash "$git_install_script"
+
+log_info "Running Git config setup script..."
+bash "$git_config_script"
 
 log_info "Running rsync setup script..."
 bash "$rsync_install_script"
