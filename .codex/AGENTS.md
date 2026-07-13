@@ -96,6 +96,16 @@ When conducting comparative experiments, the code structure and file paths may v
 However, the dataset will always be placed in a fixed, predefined location. Do not rely on symbolic links or external path redirection;
 instead, modify the dataset path directly within the code for each experiment.
 
+### Third-Party Repositories
+
+- Third-party code cloned from GitHub must live under `third/`.
+- Do not modify code in `third/` directly unless there is no practical alternative.
+- If third-party code is incompatible or buggy, prefer fixing it from `src/` by importing or inheriting from `third/` and overriding the necessary behavior via monkey patch or wrapper code.
+- Record the upstream repository version, tag, or commit in `third/requirement.toml` so the dependency state is reproducible.
+- If a direct edit to `third/` is truly unavoidable, stop and ask before changing it.
+- Any approved direct change to `third/` must be isolated in its own git commit and documented in `third/requirement.toml`, including what changed and which upstream version it was based on.
+- The goal is to keep third-party diffs minimal, reduce vendored-code uploads, and preserve reproducibility.
+
 ## 5. Commit Policy
 
 **Code changes should still end with a git commit, but documentation-only updates do not require a commit unless the user explicitly asks for one.**
