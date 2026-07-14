@@ -90,6 +90,16 @@ The project needs to be executed through the UV environment.
 If it's a model training task or long-running task, it needs to be run in the background via tmux, and after execution,
 it needs to be suspended using `read` until I check the completed results.
 
+### Goal Mode Training Behavior
+
+When operating in goal mode, once a model training job has been started successfully and is clearly running in the background:
+
+- Do not keep polling logs or repeatedly query training status unless the user explicitly asks for monitoring.
+- Do not spend tokens on passive progress checks after training has entered a normal running state.
+- Reply once with the fact that training is in progress, include the estimated completion time or duration if it can be inferred reasonably, and then stop.
+- Wait for the user's next instruction instead of continuing autonomous status checks.
+- Only continue active diagnosis if training failed to start, exited unexpectedly, or the user explicitly requested continued monitoring.
+
 ### Dataset Location
 
 When conducting comparative experiments, the code structure and file paths may vary across implementations.
