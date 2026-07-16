@@ -1,3 +1,8 @@
 os:
   editPreset: 'nvim'
-  open: '[ -z "$NVIM" ] && (nvim -- {{filename}}) || (nvim --server "$NVIM" --remote-send "q" && nvim --server "$NVIM" --remote-tab {{filename}})'
+keybinding:
+  universal:
+    edit:
+      - e
+      - o
+    openFile: <disabled>
