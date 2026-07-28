@@ -1,0 +1,36 @@
+# Optional profile: viewer-oriented commands that can also write files, change
+# host state, or execute a helper. This file is deliberately stored outside a
+# scanned rules/ directory. To enable it for one trusted project, copy it to:
+#   <project>/.codex/rules/unsafe.rules
+# Then restart Codex. Do not enable it globally.
+
+# `sed -n` can still combine with -i or a w command in the sed program.
+prefix_rule(
+    pattern = ["sed", "-n"],
+    decision = "allow",
+    justification = "Project opted in to non-interactive sed inspection, including its write-capable forms.",
+    match = ["sed -n '1,20p' README.md"],
+    not_match = ["sed -i 's/old/new/' README.md"],
+)
+
+# These commands are normally used for inspection but have write-capable
+# options or output arguments: sort/shuf (-o), xxd (-r with an output file),
+# iconv (-o), Git diff/log/show (--output), and date/hostname setters.
+prefix_rule(
+    pattern = [["sort", "shuf", "xxd", "iconv", "rg", "date", "hostname"]],
+    decision = "allow",
+    justification = "Project opted in to a viewer-oriented command with write, state-change, or helper-execution capability.",
+    match = ["sort -o sorted.txt input.txt", "rg --pre formatter TODO src", "date --set '2026-07-28'"],
+    not_match = ["rm -rf build"],
+)
+
+prefix_rule(
+    pattern = ["git", ["diff", "log", "show"]],
+    decision = "allow",
+    justification = "Project opted in to Git history and diff output, including output-file options.",
+    match = ["git diff", "git log --oneline -5", "git show HEAD"],
+    not_match = ["git add README.md"],
+)
+
+# `find` is intentionally absent: -delete and -exec can occur after arbitrary
+# predicates, so it remains review-required in the global default rule.

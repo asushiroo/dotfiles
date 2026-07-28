@@ -1,11 +1,9 @@
 # Global execution-policy baseline for Codex.
 #
-# This file governs only commands requested outside the sandbox. Unmatched
-# commands use Codex's normal approval flow, so intentionally keep the
-# automatic allow-list small and independent of any particular project.
+# This file contains only commands whose normal interface cannot write files,
+# alter system state, execute another program, or access the network. Commands
+# with a viewing mode but a write/execute mode live in the opt-in unsafe profile.
 
-# Low-risk working-directory metadata. These commands do not execute project
-# code, access the network, or alter tracked files.
 prefix_rule(
     pattern = ["pwd"],
     decision = "allow",
@@ -14,19 +12,19 @@ prefix_rule(
 )
 
 prefix_rule(
-    pattern = ["git", "status"],
+    pattern = [["ls", "dir", "vdir", "cat", "tac", "printf", "head", "tail", "grep", "egrep", "fgrep", "wc", "stat", "file", "readlink", "basename", "dirname", "realpath", "cmp", "comm", "cut", "diff", "diff3", "expand", "fold", "fmt", "join", "nl", "paste", "rev", "tr", "tsort", "uniq", "unexpand", "base64", "cksum", "b2sum", "md5sum", "sha1sum", "sha224sum", "sha256sum", "sha384sum", "sha512sum", "strings", "od", "hexdump", "column", "numfmt"]],
     decision = "allow",
-    justification = "Inspecting repository status is safe.",
-    match = ["git status --short"],
-    not_match = ["git log -1"],
+    justification = "This command only reads, compares, formats, or displays existing data.",
+    match = ["printf '%s\\n' files", "diff -u old.txt new.txt", "sha256sum package-lock.json"],
+    not_match = ["tee output.txt"],
 )
 
 prefix_rule(
-    pattern = ["git", "diff"],
+    pattern = ["git", ["status", "describe", "blame", "shortlog", "ls-files", "grep", "check-ignore", "merge-base", "rev-list"]],
     decision = "allow",
-    justification = "Inspecting repository changes is safe.",
-    match = ["git diff", "git diff --staged"],
-    not_match = ["git status --short"],
+    justification = "This Git subcommand reads local repository state without changing it.",
+    match = ["git status --short", "git grep TODO", "git merge-base HEAD main"],
+    not_match = ["git diff --output report.txt", "git add README.md"],
 )
 
 prefix_rule(
@@ -45,41 +43,13 @@ prefix_rule(
     not_match = ["git rev-parse --git-dir"],
 )
 
-# Read-only inspection. The commands in the following rule cannot alter files,
-# invoke another program, or access the network.
-prefix_rule(
-    pattern = [["ls", "cat", "sort", "head", "tail", "grep", "wc", "stat", "file", "readlink", "basename", "dirname", "realpath"]],
-    decision = "allow",
-    justification = "This command only reads or displays file and path information.",
-    match = ["ls -la", "cat README.md", "grep -R TODO src", "stat package.json"],
-    not_match = ["rm README.md"],
-)
-
-# Ripgrep is globally allowed by user choice. Its --pre option can launch a
-# preprocessor, so this is not a strict no-execution rule.
-prefix_rule(
-    pattern = ["rg"],
-    decision = "allow",
-    justification = "Searching and listing files with ripgrep is user-approved.",
-    match = ["rg --files", "rg -n TODO src"],
-    not_match = ["grep -R TODO src"],
-)
-
-prefix_rule(
-    pattern = ["git", ["ls-files", "grep"]],
-    decision = "allow",
-    justification = "Listing tracked files or searching tracked content is read-only.",
-    match = ["git ls-files", "git grep TODO"],
-    not_match = ["git status --short"],
-)
-
-# File discovery is allowed by user choice. `find -delete`, `find -exec`, and
-# `find -execdir` also match this rule, so use find only for trusted commands.
+# A find expression can delete, write, or execute a command after arbitrary
+# path predicates, so prefix rules cannot distinguish its safe forms reliably.
 prefix_rule(
     pattern = ["find"],
-    decision = "allow",
-    justification = "File discovery is user-approved; review any use of -delete, -exec, or -execdir.",
-    match = ["find . -type f", "find src -name README.md"],
+    decision = "prompt",
+    justification = "Review every find expression because it can use -delete, write-output actions, or -exec.",
+    match = ["find . -type f", "find src -name README.md", "find . -delete"],
     not_match = ["fd ."],
 )
 
@@ -126,8 +96,6 @@ prefix_rule(
 )
 
 # Never let an agent escalate privileges or operate on disks / host power.
-# Perform these actions directly in your own terminal if they are genuinely
-# required, after checking the exact target.
 prefix_rule(
     pattern = [["sudo", "doas", "su", "pkexec"]],
     decision = "forbidden",
