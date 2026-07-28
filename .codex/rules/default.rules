@@ -22,6 +22,14 @@ prefix_rule(
 )
 
 prefix_rule(
+    pattern = ["git", "diff"],
+    decision = "allow",
+    justification = "Inspecting repository changes is safe.",
+    match = ["git diff", "git diff --staged"],
+    not_match = ["git status --short"],
+)
+
+prefix_rule(
     pattern = ["git", "branch", "--show-current"],
     decision = "allow",
     justification = "Reading the current branch name is safe.",
