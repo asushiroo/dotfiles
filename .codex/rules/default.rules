@@ -37,6 +37,42 @@ prefix_rule(
     not_match = ["git rev-parse --git-dir"],
 )
 
+# Read-only inspection and search. These direct commands cannot alter files,
+# invoke another program, or access the network.
+prefix_rule(
+    pattern = [["ls", "cat", "head", "tail", "grep", "wc", "stat", "file", "readlink", "basename", "dirname", "realpath"]],
+    decision = "allow",
+    justification = "This command only reads or displays file and path information.",
+    match = ["ls -la", "cat README.md", "grep -R TODO src", "stat package.json"],
+    not_match = ["rm README.md"],
+)
+
+prefix_rule(
+    pattern = ["rg", "--files"],
+    decision = "allow",
+    justification = "Listing matching file paths with ripgrep is read-only.",
+    match = ["rg --files", "rg --files -g *.py"],
+    not_match = ["rg -n TODO src"],
+)
+
+prefix_rule(
+    pattern = ["git", ["ls-files", "grep"]],
+    decision = "allow",
+    justification = "Listing tracked files or searching tracked content is read-only.",
+    match = ["git ls-files", "git grep TODO"],
+    not_match = ["git status --short"],
+)
+
+# File discovery is allowed by user choice. `find -delete`, `find -exec`, and
+# `find -execdir` also match this rule, so use find only for trusted commands.
+prefix_rule(
+    pattern = ["find"],
+    decision = "allow",
+    justification = "File discovery is user-approved; review any use of -delete, -exec, or -execdir.",
+    match = ["find . -type f", "find src -name README.md"],
+    not_match = ["fd ."],
+)
+
 # Repository mutation, network access, and runtime/package commands must be
 # approved even if a more permissive project rule is added later.
 prefix_rule(
