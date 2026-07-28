@@ -37,7 +37,7 @@ prefix_rule(
     not_match = ["git rev-parse --git-dir"],
 )
 
-# Read-only inspection and search. These direct commands cannot alter files,
+# Read-only inspection. The commands in the following rule cannot alter files,
 # invoke another program, or access the network.
 prefix_rule(
     pattern = [["ls", "cat", "head", "tail", "grep", "wc", "stat", "file", "readlink", "basename", "dirname", "realpath"]],
@@ -47,12 +47,14 @@ prefix_rule(
     not_match = ["rm README.md"],
 )
 
+# Ripgrep is globally allowed by user choice. Its --pre option can launch a
+# preprocessor, so this is not a strict no-execution rule.
 prefix_rule(
-    pattern = ["rg", "--files"],
+    pattern = ["rg"],
     decision = "allow",
-    justification = "Listing matching file paths with ripgrep is read-only.",
-    match = ["rg --files", "rg --files -g *.py"],
-    not_match = ["rg -n TODO src"],
+    justification = "Searching and listing files with ripgrep is user-approved.",
+    match = ["rg --files", "rg -n TODO src"],
+    not_match = ["grep -R TODO src"],
 )
 
 prefix_rule(
