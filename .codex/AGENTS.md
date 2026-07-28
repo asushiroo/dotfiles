@@ -75,6 +75,11 @@ Strong success criteria let you loop independently. Weak criteria ("make it work
 
 The project requires low coupling; therefore, it should be written in separate files as much as possible.
 
+## Command Safety
+
+- Use `fd` for file discovery. Do not use the `find` command.
+- If `fd` cannot express the required search, ask the user before choosing an alternative.
+
 ## For Python projects
 
 ### Environment Deployment
