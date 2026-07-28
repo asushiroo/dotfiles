@@ -48,7 +48,7 @@ prefix_rule(
 # Read-only inspection. The commands in the following rule cannot alter files,
 # invoke another program, or access the network.
 prefix_rule(
-    pattern = [["ls", "cat", "head", "tail", "grep", "wc", "stat", "file", "readlink", "basename", "dirname", "realpath"]],
+    pattern = [["ls", "cat", "sort", "head", "tail", "grep", "wc", "stat", "file", "readlink", "basename", "dirname", "realpath"]],
     decision = "allow",
     justification = "This command only reads or displays file and path information.",
     match = ["ls -la", "cat README.md", "grep -R TODO src", "stat package.json"],
