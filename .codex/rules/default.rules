@@ -1,0 +1,99 @@
+# Global execution-policy baseline for Codex.
+#
+# This file governs only commands requested outside the sandbox. Unmatched
+# commands use Codex's normal approval flow, so intentionally keep the
+# automatic allow-list small and independent of any particular project.
+
+# Low-risk working-directory metadata. These commands do not execute project
+# code, access the network, or alter tracked files.
+prefix_rule(
+    pattern = ["pwd"],
+    decision = "allow",
+    justification = "Reading the current working directory is safe.",
+    match = ["pwd"],
+)
+
+prefix_rule(
+    pattern = ["git", "status"],
+    decision = "allow",
+    justification = "Inspecting repository status is safe.",
+    match = ["git status --short"],
+    not_match = ["git log -1"],
+)
+
+prefix_rule(
+    pattern = ["git", "branch", "--show-current"],
+    decision = "allow",
+    justification = "Reading the current branch name is safe.",
+    match = ["git branch --show-current"],
+    not_match = ["git branch --all"],
+)
+
+prefix_rule(
+    pattern = ["git", "rev-parse", "--show-toplevel"],
+    decision = "allow",
+    justification = "Reading the repository root is safe.",
+    match = ["git rev-parse --show-toplevel"],
+    not_match = ["git rev-parse --git-dir"],
+)
+
+# Repository mutation, network access, and runtime/package commands must be
+# approved even if a more permissive project rule is added later.
+prefix_rule(
+    pattern = ["git", ["add", "commit", "merge", "rebase", "cherry-pick", "revert", "reset", "restore", "clean", "checkout", "switch", "stash", "push", "fetch", "pull", "clone", "submodule", "worktree", "config"]],
+    decision = "prompt",
+    justification = "This Git command may change history, files, configuration, or contact a remote.",
+    match = ["git push origin main", "git clean -fd"],
+    not_match = ["git status --short"],
+)
+
+prefix_rule(
+    pattern = [["curl", "wget", "ssh", "scp", "sftp", "rsync"]],
+    decision = "prompt",
+    justification = "This command may send data to or retrieve data from another system.",
+    match = ["curl https://example.com", "ssh host.example"],
+    not_match = ["git status"],
+)
+
+prefix_rule(
+    pattern = [["npm", "npx", "pnpm", "yarn", "bun", "deno", "uv", "pip", "pipx", "poetry", "cargo", "go", "make", "just", "tox", "nox", "docker", "podman"]],
+    decision = "prompt",
+    justification = "Package, build, and container commands can execute project code, write files, or access the network.",
+    match = ["uv run pytest", "npm test", "docker build ."],
+    not_match = ["git status"],
+)
+
+prefix_rule(
+    pattern = [["bash", "/bin/bash", "sh", "/bin/sh", "zsh", "/bin/zsh", "fish"]],
+    decision = "prompt",
+    justification = "Shell wrappers can combine several operations; review the complete command before running it outside the sandbox.",
+    match = ["bash -lc 'git status'", "sh -c 'make test'"],
+    not_match = ["git status"],
+)
+
+prefix_rule(
+    pattern = [["rm", "rmdir", "mv", "cp", "install", "chmod", "chown", "truncate"]],
+    decision = "prompt",
+    justification = "This command can alter or remove files or permissions outside the sandbox.",
+    match = ["rm -rf build", "chmod +x script.sh"],
+    not_match = ["git status"],
+)
+
+# Never let an agent escalate privileges or operate on disks / host power.
+# Perform these actions directly in your own terminal if they are genuinely
+# required, after checking the exact target.
+prefix_rule(
+    pattern = [["sudo", "doas", "su", "pkexec"]],
+    decision = "forbidden",
+    justification = "Do not grant an agent elevated privileges; run the required command yourself after reviewing it.",
+    match = ["sudo apt update", "doas apk update"],
+    not_match = ["git status"],
+)
+
+prefix_rule(
+    pattern = [["dd", "mkfs", "fdisk", "parted", "shutdown", "reboot", "poweroff", "halt"]],
+    decision = "forbidden",
+    justification = "Do not let an agent overwrite disks or control host power; perform it manually after reviewing the target.",
+    match = ["dd if=image.iso of=/dev/sdb", "reboot"],
+    not_match = ["git status"],
+)
