@@ -36,3 +36,5 @@ function y {
         Remove-Item -LiteralPath $tmp -Force -ErrorAction SilentlyContinue
     }
 }
+
+Set-Alias -Name lzg -Value lazygit -ErrorAction SilentlyContinue

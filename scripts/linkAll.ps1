@@ -7,6 +7,7 @@ $scripts = @(
     (Join-Path $scriptRoot 'link\nvimLink.ps1'),
     (Join-Path $scriptRoot 'link\yaziLink.ps1'),
     (Join-Path $scriptRoot 'link\starshipLink.ps1'),
+    (Join-Path $scriptRoot 'link\lazygitLink.ps1'),
     (Join-Path $scriptRoot 'link\codexSync.ps1')
 )
 
