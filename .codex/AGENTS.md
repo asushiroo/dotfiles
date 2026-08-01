@@ -75,6 +75,11 @@ Strong success criteria let you loop independently. Weak criteria ("make it work
 
 The project requires low coupling; therefore, it should be written in separate files as much as possible.
 
+## Command Safety
+
+- Use `fd` for file discovery. Do not use the `find` command.
+- If `fd` cannot express the required search, ask the user before choosing an alternative.
+
 ## For Python projects
 
 ### Environment Deployment
@@ -90,8 +95,39 @@ The project needs to be executed through the UV environment.
 If it's a model training task or long-running task, it needs to be run in the background via tmux, and after execution,
 it needs to be suspended using `read` until I check the completed results.
 
+### Goal Mode Training Behavior
+
+When operating in goal mode, once a model training job has been started successfully and is clearly running in the background:
+
+- Do not keep polling logs or repeatedly query training status unless the user explicitly asks for monitoring.
+- Do not spend tokens on passive progress checks after training has entered a normal running state.
+- Reply once with the fact that training is in progress, include the estimated completion time or duration if it can be inferred reasonably, and then stop.
+- Wait for the user's next instruction instead of continuing autonomous status checks.
+- Only continue active diagnosis if training failed to start, exited unexpectedly, or the user explicitly requested continued monitoring.
+
 ### Dataset Location
 
 When conducting comparative experiments, the code structure and file paths may vary across implementations.
 However, the dataset will always be placed in a fixed, predefined location. Do not rely on symbolic links or external path redirection;
 instead, modify the dataset path directly within the code for each experiment.
+
+### Third-Party Repositories
+
+- Third-party code cloned from GitHub must live under `third/`.
+- Do not modify code in `third/` directly unless there is no practical alternative.
+- If third-party code is incompatible or buggy, prefer fixing it from `src/` by importing or inheriting from `third/` and overriding the necessary behavior via monkey patch or wrapper code.
+- Record the upstream repository version, tag, or commit in `third/requirement.toml` so the dependency state is reproducible.
+- If a direct edit to `third/` is truly unavoidable, stop and ask before changing it.
+- Any approved direct change to `third/` must be isolated in its own git commit and documented in `third/requirement.toml`, including what changed and which upstream version it was based on.
+- The goal is to keep third-party diffs minimal, reduce vendored-code uploads, and preserve reproducibility.
+
+## 5. Commit Policy
+
+**Code changes should still end with a git commit, but documentation-only updates do not require a commit unless the user explicitly asks for one.**
+
+- After finishing a code change or discrete implementation task, create a git commit before moving on.
+- For documentation-only updates, do not create a git commit by default.
+- Only commit documentation changes when the user explicitly requests a commit.
+- Use a clear, standardized commit message format: `<type>(<scope>): <summary>`.
+- Prefer concise, descriptive messages such as `feat(app): add API endpoint` or `fix(parser): handle empty input`.
+- Do not use vague messages like `update`, `fix`, or `changes`.

@@ -1,0 +1,8 @@
+os:
+  editPreset: 'nvim'
+keybinding:
+  universal:
+    edit:
+      - e
+      - o
+    openFile: <disabled>

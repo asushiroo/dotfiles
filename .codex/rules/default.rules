@@ -1,0 +1,113 @@
+# Global execution-policy baseline for Codex.
+#
+# This file contains only commands whose normal interface cannot write files,
+# alter system state, execute another program, or access the network. Commands
+# with a viewing mode but a write/execute mode live in the opt-in unsafe profile.
+
+prefix_rule(
+    pattern = ["pwd"],
+    decision = "allow",
+    justification = "Reading the current working directory is safe.",
+    match = ["pwd"],
+)
+
+prefix_rule(
+    pattern = [["ls", "dir", "vdir", "cat", "tac", "printf", "head", "tail", "grep", "egrep", "fgrep", "wc", "stat", "file", "readlink", "basename", "dirname", "realpath", "cmp", "comm", "cut", "diff", "diff3", "expand", "fold", "fmt", "join", "nl", "paste", "rev", "tr", "tsort", "uniq", "unexpand", "base64", "cksum", "b2sum", "md5sum", "sha1sum", "sha224sum", "sha256sum", "sha384sum", "sha512sum", "strings", "od", "hexdump", "column", "numfmt"]],
+    decision = "allow",
+    justification = "This command only reads, compares, formats, or displays existing data.",
+    match = ["printf '%s\\n' files", "diff -u old.txt new.txt", "sha256sum package-lock.json"],
+    not_match = ["tee output.txt"],
+)
+
+prefix_rule(
+    pattern = ["git", ["status", "describe", "blame", "shortlog", "ls-files", "grep", "check-ignore", "merge-base", "rev-list"]],
+    decision = "allow",
+    justification = "This Git subcommand reads local repository state without changing it.",
+    match = ["git status --short", "git grep TODO", "git merge-base HEAD main"],
+    not_match = ["git diff --output report.txt", "git add README.md"],
+)
+
+prefix_rule(
+    pattern = ["git", "branch", "--show-current"],
+    decision = "allow",
+    justification = "Reading the current branch name is safe.",
+    match = ["git branch --show-current"],
+    not_match = ["git branch --all"],
+)
+
+prefix_rule(
+    pattern = ["git", "rev-parse", "--show-toplevel"],
+    decision = "allow",
+    justification = "Reading the repository root is safe.",
+    match = ["git rev-parse --show-toplevel"],
+    not_match = ["git rev-parse --git-dir"],
+)
+
+# A find expression can delete, write, or execute a command after arbitrary
+# path predicates, so prefix rules cannot distinguish its safe forms reliably.
+prefix_rule(
+    pattern = ["find"],
+    decision = "prompt",
+    justification = "Review every find expression because it can use -delete, write-output actions, or -exec.",
+    match = ["find . -type f", "find src -name README.md", "find . -delete"],
+    not_match = ["fd ."],
+)
+
+# Repository mutation, network access, and runtime/package commands must be
+# approved even if a more permissive project rule is added later.
+prefix_rule(
+    pattern = ["git", ["add", "commit", "merge", "rebase", "cherry-pick", "revert", "reset", "restore", "clean", "checkout", "switch", "stash", "push", "fetch", "pull", "clone", "submodule", "worktree", "config"]],
+    decision = "prompt",
+    justification = "This Git command may change history, files, configuration, or contact a remote.",
+    match = ["git push origin main", "git clean -fd"],
+    not_match = ["git status --short"],
+)
+
+prefix_rule(
+    pattern = [["curl", "wget", "ssh", "scp", "sftp", "rsync"]],
+    decision = "prompt",
+    justification = "This command may send data to or retrieve data from another system.",
+    match = ["curl https://example.com", "ssh host.example"],
+    not_match = ["git status"],
+)
+
+prefix_rule(
+    pattern = [["npm", "npx", "pnpm", "yarn", "bun", "deno", "uv", "pip", "pipx", "poetry", "cargo", "go", "make", "just", "tox", "nox", "docker", "podman"]],
+    decision = "prompt",
+    justification = "Package, build, and container commands can execute project code, write files, or access the network.",
+    match = ["uv run pytest", "npm test", "docker build ."],
+    not_match = ["git status"],
+)
+
+prefix_rule(
+    pattern = [["bash", "/bin/bash", "sh", "/bin/sh", "zsh", "/bin/zsh", "fish"]],
+    decision = "prompt",
+    justification = "Shell wrappers can combine several operations; review the complete command before running it outside the sandbox.",
+    match = ["bash -lc 'git status'", "sh -c 'make test'"],
+    not_match = ["git status"],
+)
+
+prefix_rule(
+    pattern = [["rm", "rmdir", "mv", "cp", "install", "chmod", "chown", "truncate"]],
+    decision = "prompt",
+    justification = "This command can alter or remove files or permissions outside the sandbox.",
+    match = ["rm -rf build", "chmod +x script.sh"],
+    not_match = ["git status"],
+)
+
+# Never let an agent escalate privileges or operate on disks / host power.
+prefix_rule(
+    pattern = [["sudo", "doas", "su", "pkexec"]],
+    decision = "forbidden",
+    justification = "Do not grant an agent elevated privileges; run the required command yourself after reviewing it.",
+    match = ["sudo apt update", "doas apk update"],
+    not_match = ["git status"],
+)
+
+prefix_rule(
+    pattern = [["dd", "mkfs", "fdisk", "parted", "shutdown", "reboot", "poweroff", "halt"]],
+    decision = "forbidden",
+    justification = "Do not let an agent overwrite disks or control host power; perform it manually after reviewing the target.",
+    match = ["dd if=image.iso of=/dev/sdb", "reboot"],
+    not_match = ["git status"],
+)

@@ -5,8 +5,7 @@
 # --- Typography ---
 font-family = "Maple Mono NF CN"
 font-size = 15
-font-thicken = true
-adjust-cell-height = 6
+font-thicken = false
 
 # --- Theme and Colors ---
 theme = Kanagawa Wave
@@ -14,8 +13,8 @@ theme = Kanagawa Wave
 # --- Window and Appearance ---
 background-opacity = 0.8
 macos-titlebar-style = transparent
-window-padding-x = 16
-window-padding-y = 4
+window-padding-x = 4
+window-padding-y = 2
 window-save-state = never
 window-width = 125
 window-height = 31
@@ -78,4 +77,3 @@ keybind = cmd+shift+comma=reload_config
 
 # --- Performance ---
 scrollback-limit = 25000000
-

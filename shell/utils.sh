@@ -1,3 +1,5 @@
+alias lzg='lazygit'
+
 cdf() {
 	if [[ "$1" == "-i" ]]; then
 		local dir

@@ -1,3 +1,4 @@
+require("core.clipboard")
 require("core.basic")
 require("core.keymap")
 require("core.autocmd")
