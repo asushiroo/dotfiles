@@ -113,12 +113,15 @@ instead, modify the dataset path directly within the code for each experiment.
 
 ### Third-Party Repositories
 
-- Third-party code cloned from GitHub must live under `third/`.
-- Do not modify code in `third/` directly unless there is no practical alternative.
-- If third-party code is incompatible or buggy, prefer fixing it from `src/` by importing or inheriting from `third/` and overriding the necessary behavior via monkey patch or wrapper code.
-- Record the upstream repository version, tag, or commit in `third/requirement.toml` so the dependency state is reproducible.
-- If a direct edit to `third/` is truly unavoidable, stop and ask before changing it.
-- Any approved direct change to `third/` must be isolated in its own git commit and documented in `third/requirement.toml`, including what changed and which upstream version it was based on.
+- Third-party code cloned from GitHub must live under `third/`. Treat `third/` as a source-only working directory: it must contain only upstream third-party code, must not be modified directly, and must not be tracked by Git.
+- Keep all tracked third-party metadata, scripts, and local modifications under `.third/`. The directory must contain `.third/requirement.toml`, `.third/profiles/`, `.third/sync-profiles.sh`, and, when setup needs orchestration, `.third/bootstrap.sh`.
+- Store each upstream project's repository URL and immutable commit SHA in `.third/requirement.toml`. A tag may be recorded as a human-readable reference, but the commit SHA is the reproducible source of truth.
+- If third-party code is incompatible or buggy, first prefer fixing it from `src/` by importing or inheriting from `third/` and overriding the necessary behavior via monkey patch or wrapper code.
+- When the third-party project itself must be changed, create `.third/profiles/` and add a profile directory whose name exactly matches the project directory under `third/` (for example, `third/foo/` and `.third/profiles/foo/`). Store only the required changed files in the profile; do not copy unrelated upstream files.
+- `.third/sync-profiles.sh` must iterate over `.third/profiles/<project>/` and merge each directory's contents into `third/<project>/` with `rsync`. Preserve the trailing slashes on source and destination, fail when the corresponding upstream project is absent, and do not use `rsync --delete`: profiles are partial overlays and must not delete unrelated upstream files.
+- UV has no general `pyproject.toml` setup hook. Use `.third/bootstrap.sh` or an equivalent tracked task-runner target to perform setup in this order: restore every upstream project at the commit pinned in `.third/requirement.toml`, run `.third/sync-profiles.sh`, then run `uv sync`. CI must use the same entry point.
+- Missing files in a profile never represent deletions. A required upstream-file deletion must be listed explicitly in tracked `.third/` metadata and removed by the synchronization script only after validating its exact target path.
+- Treat `.third/profiles/` as the source of every local third-party modification: update the profile and sync script, then recreate the environment to verify that syncing produces the intended `third/<project>/` tree. Never commit synchronized edits in `third/` as the source of truth.
 - The goal is to keep third-party diffs minimal, reduce vendored-code uploads, and preserve reproducibility.
 
 ## 5. Commit Policy
