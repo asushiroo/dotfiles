@@ -1,0 +1,4 @@
+interface:
+  display_name: "Read Paper"
+  short_description: "Local PDF papers into deep Chinese notes"
+  default_prompt: "Use $read-paper to read [paper name] from the local papers folder and write a deep Chinese note."
