@@ -95,9 +95,9 @@ The project needs to be executed through the UV environment.
 If it's a model training task or long-running task, it needs to be run in the background via tmux, and after execution,
 it needs to be suspended using `read` until I check the completed results.
 
-### Goal Mode Training Behavior
+### Training Behavior
 
-When operating in goal mode, once a model training job has been started successfully and is clearly running in the background:
+In all operating modes, once a model training job has been started successfully and is clearly running in the background:
 
 - Do not keep polling logs or repeatedly query training status unless the user explicitly asks for monitoring.
 - Do not spend tokens on passive progress checks after training has entered a normal running state.
@@ -110,21 +110,6 @@ When operating in goal mode, once a model training job has been started successf
 When conducting comparative experiments, the code structure and file paths may vary across implementations.
 However, the dataset will always be placed in a fixed, predefined location. Do not rely on symbolic links or external path redirection;
 instead, modify the dataset path directly within the code for each experiment.
-
-### Third-Party Repositories
-
-- Third-party code cloned from GitHub must live under `third/`. Treat `third/` as a source-only working directory: it must contain only upstream third-party code, must not be modified directly, and must not be tracked by Git.
-- Keep all tracked third-party metadata, scripts, and local modifications under `.third/`. The directory must contain `.third/requirement.toml`, `.third/profiles/`, `.third/sync-profiles.sh`, and, when setup needs orchestration, `.third/bootstrap.sh`.
-- Store each upstream project's repository URL and immutable commit SHA in `.third/requirement.toml`. A tag may be recorded as a human-readable reference, but the commit SHA is the reproducible source of truth.
-- If third-party code is incompatible or buggy, fix it outside `third/` by default, using a wrapper, inheritance, adapter, or monkey patch from `src/`. This is the required first choice.
-- Do not create or extend `.third/profiles/` merely because modifying upstream code is simpler or more convenient.
-- A `.third/profiles/<project>/` overlay is allowed only when an external fix is technically infeasible. Before creating one, explain the failed alternatives and obtain the user's explicit approval.
-- Once approved, store only the strictly necessary changed files in the profile; do not copy unrelated upstream files.
-- `.third/sync-profiles.sh` must iterate over `.third/profiles/<project>/` and merge each directory's contents into `third/<project>/` with `rsync`. Preserve the trailing slashes on source and destination, fail when the corresponding upstream project is absent, and do not use `rsync --delete`: profiles are partial overlays and must not delete unrelated upstream files.
-- UV has no general `pyproject.toml` setup hook. Use `.third/bootstrap.sh` or an equivalent tracked task-runner target to perform setup in this order: restore every upstream project at the commit pinned in `.third/requirement.toml`, run `.third/sync-profiles.sh`, then run `uv sync`. CI must use the same entry point.
-- Missing files in a profile never represent deletions. A required upstream-file deletion must be listed explicitly in tracked `.third/` metadata and removed by the synchronization script only after validating its exact target path.
-- Treat `.third/profiles/` as the source of every local third-party modification: update the profile and sync script, then recreate the environment to verify that syncing produces the intended `third/<project>/` tree. Never commit synchronized edits in `third/` as the source of truth.
-- The goal is to keep third-party diffs minimal, reduce vendored-code uploads, and preserve reproducibility.
 
 ## 5. Commit Policy
 
